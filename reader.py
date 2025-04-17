@@ -1,55 +1,62 @@
 import pytesseract
-import cv2
-import openai
 from PIL import Image
+import pyautogui
+from transformers import pipeline
+import time
 
-# Set up Tesseract path if necessary (if you're on Windows, specify the location of Tesseract)
-# pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+# Set the path to Tesseract (adjust for your OS and installation path)
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Windows path, adjust if needed
 
-# Your OpenAI API Key (replace with your actual API key)
 openai.api_key = 'your_openai_api_key_here'
 
 
-# Function to capture the text from the image or screen
-def capture_text_from_image(image_path):
-    # Load the image from the specified path
-    img = cv2.imread(image_path)
-    # Convert the image to grayscale
-    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # Apply OCR to extract text from the image
-    text = pytesseract.image_to_string(gray_img)
+# Function to capture a screenshot of a specific region of the screen
+def capture_screen(region=(0, 0, 800, 600)):
+    """
+    Capture the screen or a specific region and return the image path.
+    """
+    screenshot = pyautogui.screenshot(region=region)
+    screenshot.save("screenshot.png")
+    return "screenshot.png"
+
+
+# Function to extract text from an image using pytesseract (OCR)
+def extract_text_from_image(image_path):
+    """
+    Extract text from the provided image using pytesseract.
+    """
+    img = Image.open(image_path)
+    text = pytesseract.image_to_string(img)
     return text
 
 
-# Function to generate code for the given problem description
-def generate_code_from_description(problem_description):
-    response = openai.Completion.create(
-        engine="gpt-3.5-turbo",  # Use the appropriate model for code generation
-        prompt=f"Given the following problem description, generate a Python solution code:\n{problem_description}",
-        max_tokens=150,
-        temperature=0.5
-    )
-    return response.choices[0].text.strip()
+# Function to generate a solution based on the extracted text using GPT
+def get_solution_from_text(problem_text):
+    """
+    Generate a solution based on the extracted problem statement using GPT.
+    """
+    solution = model(problem_text, max_length=300, num_return_sequences=1)
+    return solution[0]['generated_text']
 
 
-# Main function
+# Main function that ties everything together
 def main():
-    image_path = input("Enter the image path with the problem statement: ")
+    # Capture the screen
+    print("Capturing screen...")
+    screenshot_path = capture_screen(region=(0, 0, 800, 600))  # Capture a region (you can adjust as needed)
 
-    # Step 1: Capture the problem description from the image
-    problem_description = capture_text_from_image(image_path)
+    # Extract text from the captured screenshot
+    print("Extracting text from image...")
+    extracted_text = extract_text_from_image(screenshot_path)
 
-    # Step 2: Print the captured problem description
-    print("Captured Problem Description:")
-    print(problem_description)
+    print("Extracted Text: \n", extracted_text)
 
-    # Step 3: Generate Python code based on the problem description
-    print("\nGenerating Python solution code...\n")
-    solution_code = generate_code_from_description(problem_description)
+    # Generate solution for the problem statement
+    print("Generating solution...")
+    solution = get_solution_from_text(extracted_text)
 
-    # Step 4: Display the generated Python code (the solution)
-    print("Generated Python Code:\n")
-    print(solution_code)
+    # Display the solution
+    print("\nSolution: \n", solution)
 
 
 if __name__ == "__main__":
