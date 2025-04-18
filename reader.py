@@ -7,7 +7,8 @@ import time
 # Set the path to Tesseract (adjust for your OS and installation path)
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Windows path, adjust if needed
 
-openai.api_key = 'your_openai_api_key_here'
+# Initialize Hugging Face GPT model pipeline for text generation
+model = pipeline("text-generation", model="gpt2")  # You can replace "gpt2" with another model if you prefer
 
 
 # Function to capture a screenshot of a specific region of the screen
