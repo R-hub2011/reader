@@ -13,7 +13,7 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tessera
 
 # --- Load API Key ---
 load_dotenv()
-API_KEY = 'NOR'
+API_KEY = 'NO Key'
 
 if not API_KEY:
     print("Error: GOOGLE_API_KEY not found. Make sure it's set in your .env file.")
