@@ -24,7 +24,7 @@ if not API_KEY:
     exit()
 
 genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-2.0-flash')
 
 # --- UI Setup ---
 ctk.set_appearance_mode("System")
@@ -33,7 +33,7 @@ app = ctk.CTk()
 app.title("Local AI Coding Helper")
 app.geometry("800x600")
 
-# --- Make Window a Tool Window (Stealth Mode) ---
+# --- Stealth Window ---
 hwnd = ctypes.windll.user32.FindWindowW(None, "Local AI Coding Helper")
 if hwnd:
     ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
@@ -42,13 +42,12 @@ if hwnd:
     win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex_style)
     win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
 
-# --- Transparency & Overlay Settings ---
 app.wm_attributes("-topmost", True)
 app.wm_attributes("-alpha", 0.99)
 app.wm_attributes("-transparentcolor", "white")
 app.configure(bg="white")
 
-# --- UI Frames ---
+# --- UI Elements ---
 input_frame = ctk.CTkFrame(app)
 input_frame.pack(pady=10, padx=10, fill="x")
 input_label = ctk.CTkLabel(input_frame, text="Enter Coding Problem / Question:")
@@ -67,7 +66,6 @@ output_textbox = ctk.CTkTextbox(output_frame, width=760)
 output_textbox.pack(pady=5, padx=5, fill="both", expand=True)
 output_textbox.configure(state="disabled")
 
-# --- Output Updater ---
 def update_output(text):
     app.after(0, lambda: _update_output_on_main_thread(text))
 
@@ -77,7 +75,6 @@ def _update_output_on_main_thread(text):
     output_textbox.insert("1.0", text)
     output_textbox.configure(state="disabled")
 
-# --- Gemini API Call ---
 def call_gemini_api(problem, language):
     try:
         update_output("Generating response... Please wait.")
@@ -107,13 +104,13 @@ def on_button_click():
     def task_wrapper(problem):
         language = "Python" if "python" in problem.lower() else "Java"
         call_gemini_api(problem, language)
+        app.after(0, lambda: input_textbox.delete("1.0", "end"))  # Clear input after response
         app.after(0, lambda: ai_button.configure(state="normal", text="Get AI Help"))
 
     thread = threading.Thread(target=task_wrapper, args=(problem_text,))
     thread.daemon = True
     thread.start()
 
-# --- Screenshot to OCR ---
 def take_screenshot_and_extract_text():
     update_output("Taking screenshot and extracting text...")
     app.withdraw()
@@ -124,14 +121,14 @@ def take_screenshot_and_extract_text():
 
     extracted_text = pytesseract.image_to_string(img)
 
+    input_textbox.delete("1.0", "end")  # Clear before new insert
+
     if extracted_text.strip():
-        input_textbox.delete("1.0", "end")
         input_textbox.insert("1.0", extracted_text)
         update_output("Text extracted from screenshot. Ready to generate solution.")
     else:
         update_output("No readable text detected in screenshot.")
 
-# --- Toggle App Visibility ---
 def toggle_visibility():
     if app.winfo_viewable():
         app.withdraw()
@@ -146,6 +143,9 @@ background_listener = None
 def start_live_transcription():
     global background_listener
 
+    input_textbox.delete("1.0", "end")  # Clear previous question
+    update_output("🎙️ Live transcription started...")
+
     def callback(recognizer, audio):
         try:
             text = recognizer.recognize_google(audio)
@@ -157,7 +157,6 @@ def start_live_transcription():
         except sr.RequestError as e:
             update_output(f"🛑 API error: {e}")
 
-    update_output("🎙️ Live transcription started...")
     background_listener = recognizer.listen_in_background(mic, callback, phrase_time_limit=5)
 
 def stop_live_transcription():
@@ -167,7 +166,7 @@ def stop_live_transcription():
         background_listener = None
         update_output("🛑 Transcription stopped. You can now generate the solution.")
 
-# --- Hotkeys ---
+# --- Keyboard Shortcuts ---
 keyboard.add_hotkey("ctrl+enter", on_button_click)
 keyboard.add_hotkey("ctrl+h", take_screenshot_and_extract_text)
 keyboard.add_hotkey("ctrl+g", lambda: input_textbox.delete("1.0", "end"))
