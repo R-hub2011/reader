@@ -7,13 +7,16 @@ from dotenv import load_dotenv
 from PIL import ImageGrab
 import pytesseract
 import keyboard
+import win32gui
+import win32con
+import ctypes
 
 # --- Tesseract Configuration ---
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Update path if needed
 
 # --- Load API Key ---
 load_dotenv()
-API_KEY = 'NO Key'
+API_KEY = os.environ['GOOGLE_API_KEY'] # Replace with os.getenv('GOOGLE_API_KEY') if using .env
 
 if not API_KEY:
     print("Error: GOOGLE_API_KEY not found. Make sure it's set in your .env file.")
@@ -29,14 +32,23 @@ app = ctk.CTk()
 app.title("Local AI Coding Helper")
 app.geometry("800x600")
 
-# --- Transparency & Overlay Settings ---
-app.wm_attributes("-topmost", True)         # Always on top
-app.wm_attributes("-alpha", 0.60)           # Transparency level (0 = invisible, 1 = solid)
-app.wm_attributes("-transparentcolor", "white")  # Fully transparent color
-app.configure(bg="white")                   # Must match transparent color
-
-# --- Optional: Frameless Overlay (comment out if not needed) ---
+# --- Optional: Frameless Overlay (commented by default) ---
 # app.overrideredirect(True)
+
+# --- Make Window a Tool Window (Stealth Mode) ---
+hwnd = ctypes.windll.user32.FindWindowW(None, "Local AI Coding Helper")
+if hwnd:
+    ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+    ex_style |= win32con.WS_EX_TOOLWINDOW   # Hide from Alt+Tab, sometimes screen share
+    ex_style &= ~win32con.WS_EX_APPWINDOW   # Hide from taskbar
+    win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex_style)
+    win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+
+# --- Transparency & Overlay Settings ---
+app.wm_attributes("-topmost", True)
+app.wm_attributes("-alpha", 0.60)
+app.wm_attributes("-transparentcolor", "white")
+app.configure(bg="white")
 
 # --- UI Frames ---
 input_frame = ctk.CTkFrame(app)
@@ -106,8 +118,7 @@ def on_button_click():
 # --- Screenshot & OCR Integration ---
 def take_screenshot_and_extract_text():
     update_output("Taking screenshot and extracting text...")
-
-    app.withdraw()  # Hide window before capture
+    app.withdraw()  # Hide before capture
     time.sleep(0.5)
 
     img = ImageGrab.grab()
